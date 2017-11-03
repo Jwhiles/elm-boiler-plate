@@ -30,12 +30,15 @@ type alias Scenario =
     , duration : String
     , steps : List Step
     , expanded : Bool
+    , id : String
+    , nameSpace : String
     }
 
 
 type alias Step =
     { title : String
     , result : Int
+    , scenarioId : String
     }
 
 
@@ -43,4 +46,7 @@ type alias Model =
     { test : String
     , summary : Maybe SummaryData
     , tests : List TestStory
+    , nameSpaces : List TestStory
+    , scenarios : List Scenario
+    , steps : List Step
     }

@@ -27,7 +27,7 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" Nothing [], getJson )
+    ( Model "" Nothing [] [] [] [], getJson )
 
 
 getJson : Cmd Msg
@@ -47,7 +47,7 @@ testDecoder =
     decode (,,)
         |> requiredAt [ "RunDate" ] Json.string
         |> required "Summary" summaryDecoder
-        |> required "Stories" (Json.list storyDecoder)
+        |> required "Stories" (Json.list getNamespaceId)
 
 
 summaryDecoder : Json.Decoder SummaryData
@@ -60,29 +60,63 @@ summaryDecoder =
         |> required "Failed" Json.int
 
 
-stepDecoder : Json.Decoder Step
-stepDecoder =
+stepDecoder : String -> Json.Decoder Step
+stepDecoder scenarioId =
     decode Step
         |> required "Title" Json.string
         |> required "Result" Json.int
+        |> hardcoded scenarioId
 
 
-scenarioDecoder : Json.Decoder Scenario
-scenarioDecoder =
+getNamespaceId : Json.Decoder TestStory
+getNamespaceId =
+    Json.field "Namespace" Json.string
+        |> Json.andThen storyDecoder
+
+
+getScenarioId : String -> Json.Decoder Scenario
+getScenarioId nameSpace =
+    Json.field "Id" Json.string
+        |> Json.andThen (scenarioDecoder nameSpace)
+
+
+scenarioDecoder : String -> String -> Json.Decoder Scenario
+scenarioDecoder nameSpace scenarioId =
     decode Scenario
         |> required "Title" Json.string
         |> required "Duration" Json.string
-        |> required "Steps" (Json.list stepDecoder)
+        |> required "Steps" (Json.list (stepDecoder scenarioId))
         |> hardcoded False
+        |> hardcoded scenarioId
+        |> hardcoded nameSpace
 
 
-storyDecoder : Json.Decoder TestStory
-storyDecoder =
+storyDecoder : String -> Json.Decoder TestStory
+storyDecoder nameSpace =
     decode TestStory
-        |> required "Namespace" Json.string
+        |> hardcoded nameSpace
         |> required "Result" Json.int
-        |> required "Scenarios" (Json.list scenarioDecoder)
+        |> required "Scenarios" (Json.list (getScenarioId nameSpace))
         |> hardcoded False
+
+
+concatInside accessor x y =
+    accessor x ++ y
+
+
+normalise : List TestStory -> ( List TestStory, List Scenario, List Step )
+normalise oldStructure =
+    let
+        nameSpaces =
+            List.map (\x -> { x | scenarios = [] }) oldStructure
+
+        scenarios =
+            List.foldr (concatInside .scenarios) [] oldStructure
+
+        tests =
+            List.foldr (concatInside .steps) [] scenarios
+    in
+        ( nameSpaces, scenarios, tests )
 
 
 
@@ -99,12 +133,18 @@ update msg model =
             let
                 failuresExpanded =
                     List.map openFailedTests tests
+
+                ( nameSpaces, scenarios, steps ) =
+                    normalise tests
             in
                 ( { model
                     | test = string
                     , summary = Just summary
                     , tests =
                         failuresExpanded
+                    , nameSpaces = nameSpaces
+                    , scenarios = scenarios
+                    , steps = steps
                   }
                 , Cmd.none
                 )
