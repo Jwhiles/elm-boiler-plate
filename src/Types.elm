@@ -5,7 +5,8 @@ import Http
 
 type Msg
     = UpdateData (Result Http.Error ( String, SummaryData, List TestStory ))
-    | ExpandStory Int
+    | ExpandStory String
+    | ExpandScenario String
 
 
 type alias SummaryData =
@@ -45,7 +46,6 @@ type alias Step =
 type alias Model =
     { test : String
     , summary : Maybe SummaryData
-    , tests : List TestStory
     , nameSpaces : List TestStory
     , scenarios : List Scenario
     , steps : List Step

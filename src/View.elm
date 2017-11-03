@@ -6,6 +6,16 @@ import Html.Events exposing (onClick)
 import Html.Attributes exposing (class)
 
 
+scenariosByNamespace : Model -> TestStory -> List Scenario
+scenariosByNamespace model story =
+    List.filter (\x -> x.nameSpace == story.nameSpace) model.scenarios
+
+
+stepsById : Model -> Scenario -> List Step
+stepsById model scenario =
+    List.filter (\x -> x.scenarioId == scenario.id) model.steps
+
+
 resultFromInt : Int -> Bool
 resultFromInt i =
     case i of
@@ -16,49 +26,52 @@ resultFromInt i =
             False
 
 
-storyView : Int -> TestStory -> Html Msg
-storyView index testStory =
+storyView : Model -> TestStory -> Html Msg
+storyView model testStory =
     let
         styles =
-            if (index % 2 == 0) then
-                "fl w-100 tl bn bg-black-05"
-            else
-                "fl w-100 tl bn bg-black-10"
+            "fl w-100 tl bn bg-black-10"
 
         content =
             if testStory.expanded == True then
-                List.map scenarioView testStory.scenarios
+                List.map (scenarioView model) (scenariosByNamespace model testStory)
             else
                 []
     in
         div []
-            [ button [ onClick (ExpandStory index), class styles ]
+            [ button [ onClick (ExpandStory testStory.nameSpace), class styles ]
                 [ h3 [] [ text testStory.nameSpace ]
                 ]
             , div [ class styles ] content
             ]
 
 
-storiesView : List TestStory -> Html Msg
-storiesView stories =
-    div [] <| List.indexedMap storyView stories
+storiesView : Model -> Html Msg
+storiesView model =
+    div [] <| List.map (storyView model) model.nameSpaces
 
 
-scenarioView : Scenario -> Html Msg
-scenarioView scenario =
-    div []
-        [ h4 [] [ text scenario.title ]
-        , p []
-            [ text scenario.duration ]
-        , div
-            []
-          <|
-            List.indexedMap stepView scenario.steps
-        ]
+scenarioView : Model -> Scenario -> Html Msg
+scenarioView model scenario =
+    let
+        content =
+            if scenario.expanded == True then
+                List.map stepView (stepsById model scenario)
+            else
+                []
+    in
+        button [ onClick (ExpandScenario scenario.id) ]
+            [ h4 [] [ text scenario.title ]
+            , p []
+                [ text scenario.duration ]
+            , div
+                []
+                content
+            ]
 
 
-stepView : Int -> Step -> Html Msg
-stepView index step =
+stepView : Step -> Html Msg
+stepView step =
     let
         styles =
             if resultFromInt step.result then
@@ -134,5 +147,5 @@ view model =
             , steps model.summary
             ]
         , summary model
-        , storiesView model.tests
+        , storiesView model
         ]

@@ -27,7 +27,7 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" Nothing [] [] [] [], getJson )
+    ( Model "" Nothing [] [] [], getJson )
 
 
 getJson : Cmd Msg
@@ -140,8 +140,6 @@ update msg model =
                 ( { model
                     | test = string
                     , summary = Just summary
-                    , tests =
-                        failuresExpanded
                     , nameSpaces = nameSpaces
                     , scenarios = scenarios
                     , steps = steps
@@ -149,12 +147,33 @@ update msg model =
                 , Cmd.none
                 )
 
-        ExpandStory index ->
+        ExpandScenario id ->
             let
-                tests =
-                    List.indexedMap (toggleExpanded index) model.tests
+                expanded =
+                    List.map (expand .id id)
+                        model.scenarios
             in
-                ( { model | tests = tests }, Cmd.none )
+                ( { model | scenarios = expanded }, Cmd.none )
+
+        ExpandStory nameSpace ->
+            let
+                expanded =
+                    List.map (expand .nameSpace nameSpace)
+                        model.nameSpaces
+            in
+                ( { model | nameSpaces = expanded }, Cmd.none )
+
+
+type alias Expandable r =
+    { r | expanded : Bool }
+
+
+expand : (Expandable r -> a) -> a -> Expandable r -> Expandable r
+expand accessor test x =
+    if accessor x == test then
+        { x | expanded = not x.expanded }
+    else
+        x
 
 
 openFailedTests : TestStory -> TestStory
@@ -166,15 +185,3 @@ openFailedTests test =
             | expanded =
                 True
         }
-
-
-type alias Expandable a =
-    { a | expanded : Bool }
-
-
-toggleExpanded : Int -> Int -> Expandable a -> Expandable a
-toggleExpanded indexToChange index test =
-    if index == indexToChange then
-        { test | expanded = not test.expanded }
-    else
-        test
