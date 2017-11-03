@@ -54,13 +54,16 @@ storiesView model =
 scenarioView : Model -> Scenario -> Html Msg
 scenarioView model scenario =
     let
+        styles =
+            "fl w-100 tl bn bg-black-10"
+
         content =
             if scenario.expanded == True then
                 List.map stepView (stepsById model scenario)
             else
                 []
     in
-        button [ onClick (ExpandScenario scenario.id) ]
+        button [ onClick (ExpandScenario scenario.id), class styles ]
             [ h4 [] [ text scenario.title ]
             , p []
                 [ text scenario.duration ]
